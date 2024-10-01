@@ -1,16 +1,17 @@
 // McGeeSetCredentials.cpp : Defines the entry point for the console application.
 //
 
-#include "stdafx.h"
+//#include "stdafx.h"
 #include <Windows.h>
 #include <wincred.h>
 #include <iostream>
-#include <stdlib.h>
+//#include <stdlib.h>
 
 using namespace std;
 
 int main()
-{ 
+{
+	// ASCII functions (suffix: A)
 	/*
 
 	wchar_t* wcUsername = new wchar_t[50]; //max username size of 50 wide chars
@@ -54,35 +55,51 @@ int main()
 
 	*/
 
+	// Unicode functions (suffix: W)
 
-	wchar_t *var = L"USERNAME";
-	wchar_t envUsername[50]; //max 50 characters for username
-	GetEnvironmentVariableW(L"USERNAME", envUsername, sizeof(envUsername));
-	char password[256]{'\0'}; //max 256 characters for password
+	wchar_t wcUsername[50]; //50 chars max
+
+	GetEnvironmentVariableW(L"USERNAME", wcUsername, 50); //param 3: do not use sizeof(wcUsername) because it is 100 bytes due to wchar, but here we need to specify how many characters (50)
 
 	wchar_t username[60] = L"MCGEE\\"; //max 60 characters with domain and username
-	wcscat_s(username, envUsername);
+	wcscat_s(username, wcUsername);
+	wchar_t password[256]{ '\0' }; //max 256 characters for password
 
-	_CREDENTIALW archiveCred {
-		CRED_FLAGS_PROMPT_NOW, //DWORD Flags
-		CRED_TYPE_DOMAIN_PASSWORD, //DWORD Type
-		L"archive.mcgee.co.uk", //LPWSTR TargetName
-		0, //LPWSTR Comment
 
-		//FILETIME struct LastWritten 
-		0, //DWORD dwLowDateTime
-		0, //DWORD dwHighDateTime
+	char* cUsername = new char[60];
+	size_t returnedSize;
+	wcstombs_s(&returnedSize, cUsername, 60, username, 59); //converts wchar to char
 
-		sizeof(password), //DWORD CredentialBlobSize
-		(LPBYTE)password, //LPBYTE CredentialBlob
-		CRED_PERSIST_ENTERPRISE, //DWORD Persist
-		0, //DWORD AttributeCount
-		0, //PCREDENTIAL_ATTRIBUTEW Attributes
-		0, //LPSTR TargetAlias
-		username //LPWSTR UserName
+	cout << "Username: " << cUsername << endl;
+
+	_CREDENTIALW archiveCredentialStruct = {
+		CRED_FLAGS_PROMPT_NOW,
+		CRED_TYPE_DOMAIN_PASSWORD,
+		L"archive.mcgee.co.uk",
+		L"Credential for the archive.",
+		0,
+		NULL,
+		512,
+		(LPBYTE)password,
+		CRED_PERSIST_ENTERPRISE,
+		0,
+		0,
+		0,
+		username
 	};
 
-	CredWriteW(&archiveCred, CRED_PRESERVE_CREDENTIAL_BLOB); //preserves password if target name already exists
+	BOOL wasSuccessful = CredWriteW(&archiveCredentialStruct, 0);
+	if (wasSuccessful) {
+		cout << "Successfully created Windows Credential for 'archive.mcgee.co.uk'." << endl;
+	}
+	else {
+		cout << "Failed to create Windows Credential for 'archive.mcgee.co.uk'." << endl;
+	}
+
+	/*
+
+	int error = GetLastError();
+	cout << error << endl;
 
 	_CREDENTIALW *readCred;
 
@@ -91,7 +108,7 @@ int main()
 
 	//char *pass = (char*)readCred->CredentialBlob; //can't retrieve passwords for CRED_TYPE_DOMAIN_PASSWORD structs
 
-	DWORD *Count = 0;
+	DWORD count;
 
 	_CREDENTIALW *hi = new _CREDENTIALW[256];
 	int i;
@@ -100,13 +117,12 @@ int main()
 
 	PCREDENTIALW *cred = &hi;
 
-	CredEnumerateW(
-		0,
-		CRED_ENUMERATE_ALL_CREDENTIALS,
-		Count,
-		&cred);
+	CredEnumerateW(NULL, 0, &count, &cred);
 
-	cin.get(); //Pauses console window
+	*/
+
+	cout << "Press 'Enter' to exit...";
+	cin.get(); //pauses console window
 
     return 0;
 }
